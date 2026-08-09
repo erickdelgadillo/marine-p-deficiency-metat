@@ -1,0 +1,20 @@
+# R / RStudio
+.Rhistory
+.RData
+.Ruserdata
+.Rproj.user/
+
+# OS
+.DS_Store
+
+# Large raw datasets: kept locally, not versioned
+data/raw/prokaryotes/*
+data/raw/eukaryotes/*
+!data/raw/prokaryotes/.gitkeep
+!data/raw/eukaryotes/.gitkeep
+
+# Generated data
+data/intermediate/*
+data/processed/*
+!data/intermediate/.gitkeep
+!data/processed/.gitkeep
