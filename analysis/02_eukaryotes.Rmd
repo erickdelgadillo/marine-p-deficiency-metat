@@ -1,5 +1,5 @@
 ---
-title: "Prokaryotic Metatranscriptomic Analysis of Riverine and Phosphorus Additions"
+title: "Eukaryotic Metatranscriptomic Analysis of Riverine and Phosphorus Additions"
 author: "Erick Delgadillo"
 date: "`r Sys.Date()`"
 output:
@@ -11,13 +11,15 @@ output:
 
 # Overview
 
-This document reproduces the prokaryotic metatranscriptomic analysis
+This document reproduces the eukaryotic metatranscriptomic analysis
 used in the published study on microbial responses to riverine and
 phosphorus additions.
 
-The analysis focuses on the non-ribosomal RNA (NoRibo) fraction of the
+The analysis focuses on the poly(A)-selected RNA fraction of the
 control (C), river-water addition (R), and river-water plus phosphorus
-addition (R+P) mesocosms at 0 h and 72 h after treatment.
+addition (R+P) mesocosms at 0 h and 72 h after treatment. One R+P sample
+at 0 h was excluded from the original analysis because of insufficient
+sequencing depth, leaving two biological replicates for that group.
 
 The workflow includes taxonomic and functional annotation, transcript
 abundance processing, TPM-based analyses, and differential gene
@@ -37,10 +39,9 @@ library(dplyr, warn.conflicts = FALSE)
 library(ggplot2)
 
 SIGNIFICANCE <- 0.05
-N_REPLICATES <- 3
 
-processed_dir <- here::here("data", "processed", "prokaryotes")
-results_dir <- here::here("results", "prokaryotes")
+processed_dir <- here::here("data", "processed", "eukaryotes")
+results_dir <- here::here("results", "eukaryotes")
 
 dir.create(processed_dir, recursive = TRUE, showWarnings = FALSE)
 dir.create(results_dir, recursive = TRUE, showWarnings = FALSE)
@@ -50,20 +51,23 @@ dir.create(results_dir, recursive = TRUE, showWarnings = FALSE)
 
 ```{r taxonomy-load}
 # -------------------------------------------------------------------------
-# Load and clean GTDB taxonomic assignments
+# Load and clean eukaryotic taxonomic assignments
 # -------------------------------------------------------------------------
 # Placeholder and explicitly unclassified assignments are treated as missing,
 # allowing downstream grouping to fall back to broader taxonomic ranks.
 
 taxonomy <- readr::read_tsv(
   here::here(
-    "data", "raw", "prokaryotes",
-    "taxonomy_classification_gtdb.tsv"
+    "data", "raw", "eukaryotes",
+    "taxonomy_classification.tsv.gz"
   ),
   show_col_types = FALSE
 ) %>%
+  dplyr::rename(
+    geneid = orf
+  ) %>%
   dplyr::select(
-    orf,
+    geneid,
     Domain,
     Phylum,
     Class,
@@ -86,35 +90,40 @@ taxonomy <- readr::read_tsv(
     )
   )
 
-orders_of_interest <- c(
-  "Rhodobacterales",
-  "Puniceispirillales",
-  "Rhizobiales",
-  "Pelagibacterales",
-  "Pseudomonadales",
-  "Enterobacterales",
-  "Burkholderiales",
-  "Beggiatoales",
-  "SAR86",
-  "Flavobacteriales"
+species_of_interest <- c(
+  "Alexandrium",
+  "Scrippsiella",
+  "Symbiodinium",
+  "Thalassiosira",
+  "Chaetoceros",
+  "Skeletonema",
+  "Pseudo-nitzschia",
+  "Dinophysiales",
+  "Micromonas",
+  "Ostreococcus",
+  "Mamiellales"
 )
 
-classes_of_interest <- c(
-  "Alphaproteobacteria",
-  "Gammaproteobacteria"
+families_of_interest <- c(
+  "Choreotrichida",
+  "Tintinnida"
+)
+
+orders_of_interest <- c(
+  "Spirotrichea"
 )
 ```
 
 ```{r taxonomy-consensus}
 # -------------------------------------------------------------------------
-# Hierarchical consensus for duplicated ORF assignments
+# Hierarchical consensus for duplicated gene assignments
 # -------------------------------------------------------------------------
-# Some ORFs have more than one taxonomic assignment. Missing information in
+# Some genes have more than one taxonomic assignment. Missing information in
 # one assignment is not considered a conflict. A conflict occurs only when
 # different non-missing values are assigned to the same rank.
 
 Taxonomy_consensus <- taxonomy %>%
-  dplyr::group_by(orf) %>%
+  dplyr::group_by(geneid) %>%
   dplyr::summarise(
     conflict_Domain = dplyr::n_distinct(Domain, na.rm = TRUE) > 1,
     Domain = dplyr::first(
@@ -214,47 +223,114 @@ Taxonomy_consensus <- taxonomy %>%
 # -------------------------------------------------------------------------
 # Final taxonomic grouping
 # -------------------------------------------------------------------------
-# Taxonomic resolution is intentionally heterogeneous. Ecologically relevant
-# groups are retained at order level, while other organisms are summarized at
-# class, phylum or domain level.
+# Taxonomic resolution is intentionally heterogeneous, preserving the groups
+# used in the original eukaryotic analysis.
 
 Taxonomy <- Taxonomy_consensus %>%
   dplyr::mutate(
     Final_Taxonomy = dplyr::case_when(
-      Domain == "Archaea" ~ Domain,
+      Phylum == "Amoebozoa" ~ paste0(Phylum),
+      Phylum == "Excavata" ~ paste0(Domain),
+      Phylum == "Hacrobia" ~ paste0(Phylum),
+      Phylum == "Opisthokonta" ~ paste0(Phylum),
+      Phylum == "Rhizaria" ~ paste0(Phylum),
 
-      Phylum == "Actinobacteriota" ~ Phylum,
-      Phylum == "Spirochaetes" ~ Phylum,
-      Phylum == "Firmicutes" ~ Phylum,
-      Phylum == "Cyanobacteria" ~ Phylum,
-      Phylum == "Planctomycetota" ~ Phylum,
+      Family == "Suessiales" &
+        Species %in% species_of_interest ~ paste0(Species),
+      Family == "Suessiales" &
+        !Species %in% species_of_interest ~ paste0(Family),
 
-      Class == "Alphaproteobacteria" &
-        Order %in% orders_of_interest ~ Order,
+      Family == "Peridiniales" &
+        Species %in% species_of_interest ~ paste0(Species),
+      Family == "Peridiniales" &
+        !Species %in% species_of_interest ~ paste0(Family),
 
-      Class == "Alphaproteobacteria" &
-        !Order %in% orders_of_interest ~ Class,
+      Family == "Gymnodiniales" &
+        Species %in% species_of_interest ~ paste0(Species),
+      Family == "Gymnodiniales" &
+        !Species %in% species_of_interest ~ paste0(Family),
 
-      Class == "Gammaproteobacteria" &
-        Order %in% orders_of_interest ~ Order,
+      Family == "Gonyaulacales" &
+        Species %in% species_of_interest ~ paste0(Species),
+      Family == "Gonyaulacales" &
+        !Species %in% species_of_interest ~ paste0(Family),
 
-      Class == "Gammaproteobacteria" &
-        !Order %in% orders_of_interest ~ Class,
+      Family == "Prorocentrales" &
+        Species %in% species_of_interest ~ paste0(Species),
+      Family == "Prorocentrales" &
+        !Species %in% species_of_interest ~ paste0(Family),
 
-      Phylum == "Bacteroidota" &
-        Order %in% orders_of_interest ~ Order,
+      Class == "Dinoflagellata" &
+        !Species %in% species_of_interest ~ paste0(Order),
 
-      Phylum == "Bacteroidota" &
-        !Order %in% orders_of_interest ~ Phylum,
+      Order == "Dinophyceae" &
+        !Species %in% species_of_interest ~ paste0(Family),
 
-      Phylum == "Proteobacteria" &
-        !Class %in% classes_of_interest ~ Phylum,
+      Family == "Choreotrichida" ~ paste0(Family),
+      Family == "Tintinnida" ~ paste0(Family),
 
-      TRUE ~ Domain
+      Order == "Spirotrichea" &
+        !Family %in% families_of_interest ~ paste0(Order),
+
+      Class == "Ciliophora" &
+        !Order %in% orders_of_interest ~ paste0(Class),
+
+      Order == "Bacillariophyta" &
+        Species %in% species_of_interest ~ paste0(Species),
+
+      Order == "Bacillariophyta" &
+        !Species %in% species_of_interest ~ paste0(Order),
+
+      Phylum == "Stramenopiles" &
+        Order != "Bacillariophyta" ~ paste0(Class),
+
+      Class == "Ochrophyta" &
+        is.na(Order) ~ paste0(Class),
+
+      Phylum == "Stramenopiles" &
+        is.na(Class) ~ paste0(Phylum),
+
+      Phylum == "Archaeplastida" &
+        Species %in% species_of_interest ~ paste0(Species),
+
+      Phylum == "Archaeplastida" &
+        !Species %in% species_of_interest ~ paste0(Class)
+    )
+  ) %>%
+  dplyr::mutate(
+    Final_Taxonomy = dplyr::case_when(
+      is.na(Final_Taxonomy) ~ paste0(Phylum),
+      !is.na(Final_Taxonomy) ~ Final_Taxonomy
+    ),
+    Final_Taxonomy = ifelse(
+      Final_Taxonomy == "NA",
+      paste0(Class),
+      Final_Taxonomy
+    ),
+    Final_Taxonomy = ifelse(
+      Final_Taxonomy == "NA",
+      paste0(Phylum),
+      Final_Taxonomy
+    ),
+    Final_Taxonomy = ifelse(
+      Final_Taxonomy == "NA",
+      paste0(Domain),
+      Final_Taxonomy
+    ),
+    Final_Taxonomy = dplyr::case_when(
+      Final_Taxonomy == "Prorocentrales" ~ "Dinophyceae",
+      Final_Taxonomy == "Pelagodinium" ~ "Suessiaceae",
+      Final_Taxonomy == "Noctilucophyceae" ~ "Dinoflagellata",
+      Final_Taxonomy == "Oxyrrhea" ~ "Dinoflagellata",
+      Final_Taxonomy == "Opalozoa" ~ "Stramenopiles",
+      Final_Taxonomy == "Archaeplastida" ~ "Eukaryota",
+      Final_Taxonomy == "Alveolata" ~ "Eukaryota",
+      Final_Taxonomy == "Ciliopora" ~ "Eukaryota",
+      TRUE ~ Final_Taxonomy
     )
   ) %>%
   dplyr::select(
-    orf,
+    geneid,
     Domain,
     Phylum,
     Class,
@@ -265,37 +341,30 @@ Taxonomy <- Taxonomy_consensus %>%
     Final_Taxonomy
   )
 
-stopifnot(!anyDuplicated(Taxonomy$orf))
+stopifnot(!anyDuplicated(Taxonomy$geneid))
 ```
 
 # Sample metadata
 
 ```{r sample-metadata}
 # -------------------------------------------------------------------------
-# Prokaryotic sample metadata
+# Eukaryotic sample metadata
 # -------------------------------------------------------------------------
 # Sequencing identifiers are linked to the experimental design. Only samples
 # belonging to the experiment reproduced in this repository are retained.
 
-samples_tags <- read.csv(
+samples_tags <- readr::read_csv(
   here::here(
-    "data", "metadata", "prokaryotes",
-    "INTERES_Prok_samples_tags.csv"
+    "data", "metadata", "eukaryotes",
+    "INTERES_Euk_samples_tags.csv"
   ),
-  sep = ",",
-  check.names = FALSE
+  show_col_types = FALSE
 ) %>%
   dplyr::select(
     sample,
     Sample,
-    T1
-  ) %>%
-  tidyr::unite(
-    sample,
-    sample,
-    T1,
-    sep = "_",
-    remove = TRUE
+    group,
+    date
   ) %>%
   tidyr::separate(
     Sample,
@@ -309,10 +378,20 @@ samples_tags <- read.csv(
     sep = "_",
     remove = FALSE
   ) %>%
+  dplyr::mutate(
+    sample = as.character(sample)
+  ) %>%
   dplyr::filter(Workpackage == "WP2")
 
+replicate_counts <- samples_tags %>%
+  dplyr::count(
+    treatment,
+    time,
+    name = "n_replicates"
+  )
+
 stopifnot(
-  nrow(samples_tags) == 18,
+  nrow(samples_tags) == 17,
   !anyDuplicated(samples_tags$sample)
 )
 ```
@@ -326,19 +405,19 @@ stopifnot(
 # Only the identifiers required downstream are retained. Up to three KEGG
 # ortholog assignments are preserved in priority order.
 
-Prok_annotations <- suppressWarnings(
+Euk_annotations <- suppressWarnings(
   data.table::fread(
     here::here(
-      "data", "raw", "prokaryotes",
+      "data", "raw", "eukaryotes",
       "all_samples_emapper_annotations.tsv"
     )
   )
 ) %>%
   dplyr::rename(
-    orf = `#query`
+    geneid = `#query`
   ) %>%
   dplyr::select(
-    orf,
+    geneid,
     KEGG_ko,
     KEGG_Module,
     PFAMs
@@ -358,33 +437,40 @@ Prok_annotations <- suppressWarnings(
     KEGG_Module = sub(",.*$", "", KEGG_Module)
   )
 
-stopifnot(!anyDuplicated(Prok_annotations$orf))
+stopifnot(!anyDuplicated(Euk_annotations$geneid))
 ```
 
 # Transcript abundance
 
 ```{r counts-and-tpm}
 # -------------------------------------------------------------------------
-# Raw counts, prokaryotic filtering and TPM recalculation
+# Raw counts, eukaryotic filtering and TPM recalculation
 # -------------------------------------------------------------------------
-# Counts are restricted to the 18 study samples and to ORFs represented in
-# the curated prokaryotic taxonomy. TPM is recalculated within this retained
-# prokaryotic fraction.
+# Counts are restricted to the 17 study samples and to genes represented in
+# the curated eukaryotic taxonomy. TPM is recalculated within this retained
+# eukaryotic fraction.
 
-prok_counts_raw <- readr::read_tsv(
+euk_counts_raw <- readr::read_tsv(
   here::here(
-    "data", "raw", "prokaryotes",
-    "counts.tsv.gz"
+    "data", "raw", "eukaryotes",
+    "polyA_counts.tsv.gz"
   ),
   show_col_types = FALSE
 ) %>%
+  dplyr::rename(
+    geneid = Geneid
+  ) %>%
+  dplyr::mutate(
+    geneid = stringr::str_remove(geneid, "^cds\\."),
+    sample = as.character(sample)
+  ) %>%
   dplyr::filter(
     sample %in% samples_tags$sample
   ) %>%
   dplyr::semi_join(
     Taxonomy %>%
-      dplyr::filter(Domain != "Eukaryota"),
-    by = "orf"
+      dplyr::filter(Domain == "Eukaryota"),
+    by = "geneid"
   ) %>%
   dplyr::group_by(sample) %>%
   dplyr::mutate(
@@ -393,10 +479,10 @@ prok_counts_raw <- readr::read_tsv(
   dplyr::ungroup()
 
 stopifnot(
-  setequal(unique(prok_counts_raw$sample), samples_tags$sample)
+  setequal(unique(euk_counts_raw$sample), samples_tags$sample)
 )
 
-tpm_check <- prok_counts_raw %>%
+tpm_check <- euk_counts_raw %>%
   dplyr::group_by(sample) %>%
   dplyr::summarise(
     total_tpm = sum(tpm),
@@ -447,14 +533,14 @@ functional_kos <- unique(Hiper_proteins_analysis$KEGG_ko)
 # Join expression, taxonomy, functional annotation and sample metadata
 # -------------------------------------------------------------------------
 
-Prok_annotated <- prok_counts_raw %>%
+Euk_annotated <- euk_counts_raw %>%
   dplyr::left_join(
     Taxonomy,
-    by = "orf"
+    by = "geneid"
   ) %>%
   dplyr::left_join(
-    Prok_annotations,
-    by = "orf"
+    Euk_annotations,
+    by = "geneid"
   ) %>%
   dplyr::left_join(
     samples_tags,
@@ -462,7 +548,7 @@ Prok_annotated <- prok_counts_raw %>%
   )
 
 stopifnot(
-  nrow(Prok_annotated) == nrow(prok_counts_raw)
+  nrow(Euk_annotated) == nrow(euk_counts_raw)
 )
 ```
 
@@ -470,17 +556,17 @@ stopifnot(
 # -------------------------------------------------------------------------
 # Tables used by downstream analyses
 # -------------------------------------------------------------------------
-# There is one observation per ORF and biological replicate at this stage,
+# There is one observation per gene and biological replicate at this stage,
 # so the original group_by()/summarise() operations reduce to a direct
 # projection of the required columns.
 
-Prok_counts_annotated <- Prok_annotated %>%
+Euk_counts_annotated <- Euk_annotated %>%
   dplyr::transmute(
     Workpackage,
     treatment,
     time,
     replic,
-    orf,
+    geneid,
     Final_Taxonomy,
     Phylum,
     Class,
@@ -497,13 +583,13 @@ Prok_counts_annotated <- Prok_annotated %>%
     nReplics = 1L
   )
 
-Prok_TPMs_annotated <- Prok_annotated %>%
+Euk_TPMs_annotated <- Euk_annotated %>%
   dplyr::transmute(
     Workpackage,
     treatment,
     time,
     replic,
-    orf,
+    geneid,
     Final_Taxonomy,
     Phylum,
     Class,
@@ -521,18 +607,18 @@ Prok_TPMs_annotated <- Prok_annotated %>%
   )
 
 arrow::write_parquet(
-  Prok_counts_annotated,
+  Euk_counts_annotated,
   file.path(
     processed_dir,
-    "prok_counts_annotated.parquet"
+    "euk_counts_annotated.parquet"
   )
 )
 
 arrow::write_parquet(
-  Prok_TPMs_annotated,
+  Euk_TPMs_annotated,
   file.path(
     processed_dir,
-    "prok_tpms_annotated.parquet"
+    "euk_tpms_annotated.parquet"
   )
 )
 ```
@@ -543,10 +629,10 @@ arrow::write_parquet(
 # -------------------------------------------------------------------------
 # Select genes of functional interest using prioritized KEGG assignments
 # -------------------------------------------------------------------------
-# For each ORF, the first matching KEGG assignment is retained in the order
+# For each gene, the first matching KEGG assignment is retained in the order
 # KEGG_ko -> KEGG_ko2 -> KEGG_ko3.
 
-Prok_filtered <- Prok_TPMs_annotated %>%
+Euk_filtered <- Euk_TPMs_annotated %>%
   dplyr::mutate(
     selected_KEGG = dplyr::case_when(
       KEGG_ko %in% functional_kos ~ KEGG_ko,
@@ -561,14 +647,18 @@ Prok_filtered <- Prok_TPMs_annotated %>%
   ) %>%
   dplyr::select(-selected_KEGG)
 
-Prok_functional_joined <- Prok_filtered %>%
+Euk_functional_joined <- Euk_filtered %>%
   dplyr::left_join(
     Hiper_proteins_analysis,
     by = "KEGG_ko",
     relationship = "many-to-many"
   ) %>%
   dplyr::filter(
-    kingdom != "Eukarya"
+    !kingdom %in% c(
+      "Bacteria",
+      "Bacteria/Archaea",
+      "Archaea"
+    )
   )
 ```
 
@@ -577,7 +667,7 @@ Prok_functional_joined <- Prok_filtered %>%
 # Aggregate TPM by functional gene and taxonomic group
 # -------------------------------------------------------------------------
 
-Prok_functional_TPM <- Prok_functional_joined %>%
+Euk_functional_TPM <- Euk_functional_joined %>%
   dplyr::group_by(
     Workpackage,
     treatment,
@@ -596,10 +686,10 @@ Prok_functional_TPM <- Prok_functional_joined %>%
   )
 
 arrow::write_parquet(
-  Prok_functional_TPM,
+  Euk_functional_TPM,
   file.path(
     processed_dir,
-    "prok_functional_tpms.parquet"
+    "euk_functional_tpms.parquet"
   )
 )
 ```
@@ -608,18 +698,22 @@ arrow::write_parquet(
 
 ```{r mean-tpm}
 # -------------------------------------------------------------------------
-# Mean TPM across three biological replicates
+# Mean TPM across biological replicates
 # -------------------------------------------------------------------------
-# ORFs absent from a replicate are implicit zeros in the long table.
-# Therefore, observed TPM values are summed and divided by the fixed number
-# of biological replicates rather than averaged only across detected rows.
+# Most treatment x time groups have three biological replicates. R+P at 0 h
+# has two, so the divisor is taken directly from the sample metadata.
 
-Prok_mean_TPM <- Prok_TPMs_annotated %>%
+Euk_mean_TPM <- Euk_TPMs_annotated %>%
+  dplyr::left_join(
+    replicate_counts,
+    by = c("treatment", "time")
+  ) %>%
   dplyr::group_by(
     Workpackage,
     treatment,
     time,
-    orf,
+    n_replicates,
+    geneid,
     Final_Taxonomy,
     Phylum,
     Class,
@@ -634,26 +728,27 @@ Prok_mean_TPM <- Prok_TPMs_annotated %>%
     PFAMs
   ) %>%
   dplyr::summarise(
-    tpm = sum(tpm) / N_REPLICATES,
+    tpm = sum(tpm) / dplyr::first(n_replicates),
     nReplics_detected = dplyr::n(),
     .groups = "drop"
-  )
+  ) %>%
+  dplyr::select(-n_replicates)
 
 arrow::write_parquet(
-  Prok_mean_TPM,
+  Euk_mean_TPM,
   file.path(
     processed_dir,
-    "prok_mean_tpms.parquet"
+    "euk_mean_tpms.parquet"
   )
 )
 ```
 
 ```{r taxonomic-composition}
 # -------------------------------------------------------------------------
-# Taxonomic composition of the prokaryotic metatranscriptome
+# Taxonomic composition of the eukaryotic metatranscriptome
 # -------------------------------------------------------------------------
 
-Prok_MetaT_Proportion_FinalTax <- Prok_mean_TPM %>%
+Euk_MetaT_Proportion_FinalTax <- Euk_mean_TPM %>%
   tidyr::unite(
     sample,
     treatment,
@@ -677,15 +772,13 @@ Prok_MetaT_Proportion_FinalTax <- Prok_mean_TPM %>%
 # -------------------------------------------------------------------------
 # Functional gene ratios within taxonomic groups
 # -------------------------------------------------------------------------
-# Functional TPM values are averaged across the three biological replicates.
-# This is algebraically equivalent to first averaging each ORF and then
-# repeating the KEGG-selection step because functional annotation is fixed
-# for each ORF across replicates.
+# Functional TPM values are averaged using the number of biological
+# replicates actually available for each treatment x time group.
 #
 # pstA, pstB, pstC and pstS are grouped as components of the pstABCS
 # high-affinity phosphate transport system.
 
-Prok_gene_ratios <- Prok_functional_TPM %>%
+Euk_gene_ratios <- Euk_functional_TPM %>%
   dplyr::mutate(
     gene_protein = dplyr::if_else(
       gene_protein %in% c("pstA", "pstB", "pstC", "pstS"),
@@ -693,9 +786,14 @@ Prok_gene_ratios <- Prok_functional_TPM %>%
       gene_protein
     )
   ) %>%
+  dplyr::left_join(
+    replicate_counts,
+    by = c("treatment", "time")
+  ) %>%
   dplyr::group_by(
     treatment,
     time,
+    n_replicates,
     gene_protein,
     Category,
     Subcategory,
@@ -703,9 +801,10 @@ Prok_gene_ratios <- Prok_functional_TPM %>%
     Final_Taxonomy
   ) %>%
   dplyr::summarise(
-    tpm = sum(tpm) / N_REPLICATES,
+    tpm = sum(tpm) / dplyr::first(n_replicates),
     .groups = "drop"
   ) %>%
+  dplyr::select(-n_replicates) %>%
   tidyr::unite(
     sample,
     treatment,
@@ -714,35 +813,31 @@ Prok_gene_ratios <- Prok_functional_TPM %>%
     remove = TRUE
   ) %>%
   dplyr::left_join(
-    Prok_MetaT_Proportion_FinalTax,
+    Euk_MetaT_Proportion_FinalTax,
     by = c("sample", "Final_Taxonomy")
   ) %>%
   dplyr::mutate(
     GenRatio = tpm / Total_tpm
-  ) %>%
-  dplyr::left_join(
-    Environmental_data,
-    by = "sample"
   )
 
 stopifnot(
-  !any(is.na(Prok_gene_ratios$Total_tpm)),
-  !any(is.na(Prok_gene_ratios$GenRatio)),
-  !any(is.infinite(Prok_gene_ratios$GenRatio))
+  !any(is.na(Euk_gene_ratios$Total_tpm)),
+  !any(is.na(Euk_gene_ratios$GenRatio)),
+  !any(is.infinite(Euk_gene_ratios$GenRatio))
 )
 
 readr::write_csv(
-  Prok_gene_ratios,
+  Euk_gene_ratios,
   file.path(
     processed_dir,
-    "prok_gene_ratios.csv"
+    "euk_gene_ratios.csv"
   )
 )
 ```
 
 # Differential gene expression analysis
 
-Differential gene expression was evaluated from raw prokaryotic read
+Differential gene expression was evaluated from raw eukaryotic read
 counts using edgeR. Only samples belonging to the experiment described
 in the associated publication are included in this analysis.
 
@@ -750,12 +845,12 @@ in the associated publication are included in this analysis.
 # -------------------------------------------------------------------------
 # Count matrix and experimental groups
 # -------------------------------------------------------------------------
-# ORFs not detected in a sample are assigned a count of zero. Sample columns
+# Genes not detected in a sample are assigned a count of zero. Sample columns
 # are explicitly ordered according to the metadata.
 
-Prok_count_matrix <- prok_counts_raw %>%
+Euk_count_matrix <- euk_counts_raw %>%
   dplyr::select(
-    orf,
+    geneid,
     sample,
     count
   ) %>%
@@ -764,9 +859,9 @@ Prok_count_matrix <- prok_counts_raw %>%
     values_from = count,
     values_fill = 0
   ) %>%
-  tibble::column_to_rownames("orf")
+  tibble::column_to_rownames("geneid")
 
-Prok_count_matrix <- Prok_count_matrix[
+Euk_count_matrix <- Euk_count_matrix[
   ,
   samples_tags$sample,
   drop = FALSE
@@ -789,7 +884,7 @@ dge_samples <- samples_tags %>%
 
 stopifnot(
   identical(
-    colnames(Prok_count_matrix),
+    colnames(Euk_count_matrix),
     dge_samples$sample
   )
 )
@@ -804,7 +899,7 @@ dge_samples_df <- as.data.frame(dge_samples)
 rownames(dge_samples_df) <- dge_samples_df$sample
 
 dgelist <- edgeR::DGEList(
-  counts = Prok_count_matrix,
+  counts = Euk_count_matrix,
   samples = dge_samples_df
 )
 
@@ -880,7 +975,7 @@ contrasts <- limma::makeContrasts(
 # -------------------------------------------------------------------------
 # The six explicitly defined contrasts are tested in the order shown above.
 
-Prok_DGE <- tibble::tibble()
+Euk_DGE <- tibble::tibble()
 
 for (contrast_name in colnames(contrasts)) {
 
@@ -894,19 +989,19 @@ for (contrast_name in colnames(contrasts)) {
     n = Inf,
     adjust.method = "fdr"
   )$table %>%
-    tibble::rownames_to_column("orf") %>%
+    tibble::rownames_to_column("geneid") %>%
     dplyr::mutate(
       contrast = contrast_name
     )
 
-  Prok_DGE <- dplyr::bind_rows(
-    Prok_DGE,
+  Euk_DGE <- dplyr::bind_rows(
+    Euk_DGE,
     contrast_result
   )
 }
 
 stopifnot(
-  nrow(Prok_DGE) ==
+  nrow(Euk_DGE) ==
     nrow(fit$coefficients) * ncol(contrasts)
 )
 ```
@@ -916,14 +1011,14 @@ stopifnot(
 # Annotate differential expression results
 # -------------------------------------------------------------------------
 
-Prok_DGE_annotated <- Prok_DGE %>%
+Euk_DGE_annotated <- Euk_DGE %>%
   dplyr::left_join(
     Taxonomy,
-    by = "orf"
+    by = "geneid"
   ) %>%
   dplyr::left_join(
-    Prok_annotations,
-    by = "orf"
+    Euk_annotations,
+    by = "geneid"
   ) %>%
   dplyr::mutate(
     comparison = dplyr::case_when(
@@ -939,14 +1034,14 @@ Prok_DGE_annotated <- Prok_DGE %>%
   )
 
 stopifnot(
-  nrow(Prok_DGE_annotated) == nrow(Prok_DGE)
+  nrow(Euk_DGE_annotated) == nrow(Euk_DGE)
 )
 
 arrow::write_parquet(
-  Prok_DGE_annotated,
+  Euk_DGE_annotated,
   file.path(
     processed_dir,
-    "prok_differential_expression.parquet"
+    "euk_differential_expression.parquet"
   )
 )
 ```
@@ -959,7 +1054,7 @@ arrow::write_parquet(
 # original analysis. It is not a classical volcano plot because the x-axis
 # represents average expression rather than -log10(p).
 
-Prok_DGE_plot <- Prok_DGE_annotated %>%
+Euk_DGE_plot <- Euk_DGE_annotated %>%
   dplyr::mutate(
     significant = FDR <= SIGNIFICANCE,
     transparency = dplyr::if_else(
@@ -969,8 +1064,8 @@ Prok_DGE_plot <- Prok_DGE_annotated %>%
     )
   )
 
-Prok_DGE_overview_plot <- ggplot(
-  Prok_DGE_plot,
+Euk_DGE_overview_plot <- ggplot(
+  Euk_DGE_plot,
   aes(
     x = logCPM,
     y = logFC,
@@ -1001,18 +1096,18 @@ Prok_DGE_overview_plot <- ggplot(
     y = "log2 fold change",
     caption = paste(
       "Differential expression overview.",
-      "Highlighted ORFs have P < 0.05 and |logFC| > 1."
+      "Highlighted genes have P < 0.05 and |logFC| > 1."
     )
   )
 
-Prok_DGE_overview_plot
+Euk_DGE_overview_plot
 
 ggsave(
   filename = file.path(
     results_dir,
-    "prok_differential_expression_overview.png"
+    "euk_differential_expression_overview.png"
   ),
-  plot = Prok_DGE_overview_plot,
+  plot = Euk_DGE_overview_plot,
   width = 18,
   height = 12,
   units = "cm",
