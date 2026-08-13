@@ -1,5 +1,10 @@
 # Phosphorus Microcosm Metatranscriptomics
 
+![Version](https://img.shields.io/badge/version-v0.1.0-blue)
+![R](https://img.shields.io/badge/R-metatranscriptomics-276DC3)
+![Bioconductor](https://img.shields.io/badge/Bioconductor-edgeR-87B13F)
+![Status](https://img.shields.io/badge/status-refactoring-yellow)
+
 Reconstruction and refactoring of an R-based metatranscriptomic analysis workflow focused on microbial responses to phosphorus availability.
 
 This repository is being developed from the original analysis scripts used during a marine microbial ecology research project. The goal is to transform the original research code into a structured, documented, and reproducible analytical workflow.
@@ -40,7 +45,7 @@ This repository aims to:
 ## Repository structure
 
 ```text
-phosphorus-micro-metat/
+marine-p-deficiency-metat/
 ├── R/                    # Reusable R functions
 ├── scripts/              # Data processing and statistical analyses
 ├── figures/              # Scripts used to generate figures
