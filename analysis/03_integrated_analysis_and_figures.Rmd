@@ -1254,6 +1254,40 @@ Phosphorus_Subcategory$Domain  <- factor(  Phosphorus_Subcategory$Domain,
 
 ```
 
+```{r}
+Total_Phoshorus <- P_Genes %>%
+  group_by(
+    Workpackage,
+    treatment,
+    time,
+    replic,
+    Category,
+    Domain
+  ) %>%
+  dplyr::summarise(
+    tpm = sum(tpm),
+    .groups = "drop"
+  ) %>%
+  group_by(
+    Workpackage,
+    treatment,
+    time,
+    Category,
+    Domain
+  ) %>%
+  dplyr::summarise(
+    Total_P_mean = mean(tpm),
+    errorstandar = std.error(tpm),
+    .groups = "drop"
+  )
+
+Total_Phoshorus$Domain <- factor(
+  Total_Phoshorus$Domain,
+  levels = c("Prokaryotes", "Eukaryotes")
+)
+```
+
+
 ```{r, fig.height=8, fig.width=6}
 
 Sobcategory_proportions <- Phosphorus_Subcategory %>%
