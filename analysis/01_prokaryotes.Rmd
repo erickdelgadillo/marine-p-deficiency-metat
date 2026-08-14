@@ -505,6 +505,7 @@ Prok_TPMs_annotated <- Prok_annotated %>%
     replic,
     orf,
     Final_Taxonomy,
+    Domain,
     Phylum,
     Class,
     Order,
