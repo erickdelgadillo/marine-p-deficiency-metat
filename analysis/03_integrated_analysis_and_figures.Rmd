@@ -1238,22 +1238,6 @@ ggsave(
 ```
 
 
-
-
-
-```{r, fig.height=9, fig.width=7}
-Phosphorus_Subcategory <- P_Genes %>%
-  group_by(Workpackage, treatment, time, replic, Category, Subcategory, Domain) %>%
-  dplyr::summarise(tpm = sum(tpm)) %>%
-  group_by(Workpackage, treatment, time, Category, Subcategory, Domain) %>%
-  dplyr::summarise(SubCat_mean=mean(tpm), errorstandar=std.error(tpm))%>%
-ungroup()
-
-Phosphorus_Subcategory$Domain  <- factor(  Phosphorus_Subcategory$Domain,
-                                                     levels = c("Prokaryotes","Eukaryotes"))
-
-```
-
 ```{r}
 Total_Phoshorus <- P_Genes %>%
   group_by(
@@ -1286,6 +1270,23 @@ Total_Phoshorus$Domain <- factor(
   levels = c("Prokaryotes", "Eukaryotes")
 )
 ```
+
+
+
+```{r, fig.height=9, fig.width=7}
+Phosphorus_Subcategory <- P_Genes %>%
+  group_by(Workpackage, treatment, time, replic, Category, Subcategory, Domain) %>%
+  dplyr::summarise(tpm = sum(tpm)) %>%
+  group_by(Workpackage, treatment, time, Category, Subcategory, Domain) %>%
+  dplyr::summarise(SubCat_mean=mean(tpm), errorstandar=std.error(tpm))%>%
+ungroup()
+
+Phosphorus_Subcategory$Domain  <- factor(  Phosphorus_Subcategory$Domain,
+                                                     levels = c("Prokaryotes","Eukaryotes"))
+
+```
+
+
 
 
 ```{r, fig.height=8, fig.width=6}
@@ -2581,25 +2582,8 @@ Euk_nMDS.perm$Div=Euk_nMDS$time
 ```
 
 
-```{r nMDS}
 
-# MDS=data.frame(MDS1=NMDS$points[,1], MDS2=NMDS$points[,2], group=Euk_nMDS$treatment_time) # This is the gruping parameter
-# 
-# 
-# veganCovEllipse<-function (cov, center = c(0, 0), scale = 1, npoints = 100) 
-# {
-#   theta <- (0:npoints) * 2 * pi/npoints
-#   Circle <- cbind(cos(theta), sin(theta))
-#   t(center + scale * t(Circle %*% chol(cov)))
-# }
-# 
-# df_ell <- data.frame()
-# for(g in levels(MDS$group)){
-#   df_ell <- rbind(df_ell, cbind(as.data.frame(with(MDS[MDS$group==g,],
-#                                                    veganCovEllipse(cov.wt(cbind(MDS1,MDS2),wt=rep(1/length(MDS1),length(MDS1)))$cov,center=c(mean(MDS1),mean(MDS2)))))
-#                                 ,group=g))
-# }
-```
+
 ```{r}
 MDS <- data.frame(
   MDS1 = NMDS$points[,1],
@@ -2643,110 +2627,7 @@ hulls <- MDS |>
 
 ```
 
-```{r}
-Euk_nMDS_OG <- ggplot() +
-  geom_point(data = Euk_nMDS.perm,
-             aes(NMDS1, NMDS2, colour = treatment_time, shape = treatment_time), size = 3) +
-  geom_polygon(data = df_ell,
-               aes(MDS1, MDS2, fill = group), alpha = 0.2, inherit.aes = FALSE) +
-  geom_polygon(data = hulls,
-               aes(MDS1, MDS2, fill = group), alpha = 0.12, inherit.aes = FALSE)
 
-```
-
-```{r}
-Euk_nMDS_OG <- ggplot(Euk_nMDS.perm,
-                      aes(NMDS1, NMDS2, colour = treatment_time, shape = treatment_time)) +
-  geom_point(size = 3) +
-  stat_ellipse(aes(group = treatment_time, fill = treatment_time),
-               type = "norm", geom = "polygon", alpha = 0.2, level = 0.68,
-               show.legend = FALSE, na.rm = TRUE)
-Euk_nMDS_OG
-```
-
-
-```{r, fig.height=7, fig.width=7}
-library(ggplot2)
-
-# Asignar colores y formas
-color_values <- c("Control 0h" = "slateblue", "Control 72h" = "slateblue4",
-                  "River 0h" = "green1", "River 72h" = "green4",
-                   "River+P 0h" = "orangered1", "River+P 72h" = "orangered4")
-
-shape_values <- c("Control 0h" = 19, "Control 72h" = 19,
-                  "River 0h" = 17, "River 72h" = 17,
-                   "River+P 0h" = 15, "River+P 72h" = 15)
-
-# Crear el gráfico
-Euk_nMDS_OG <- ggplot() +
-  geom_point(data = Euk_nMDS.perm, aes(x = NMDS1, y = NMDS2, colour = treatment_time, shape = treatment_time), size = 3) +
-geom_polygon(
-  data = df_ell,
-  aes(x = MDS1, y = MDS2, fill = group),
-  alpha = 0.2,
-  show.legend = FALSE
-) +
-  theme_bw() +
-       ggtitle ("Eukaryotes")+
-  theme(panel.background = element_rect(fill = NA, colour = "black", size = 1, linetype = "solid")) +
-  scale_colour_manual(name = "", values = color_values,
-                      labels = c("Control 0h",
-                                 "Control 72h",
-                                 "River 0h",
-                                 "River 72h",
-                                 "River+P 0h",
-                                 "River+P 72h")) +
-  scale_fill_manual(name = "", values = color_values,
-                    labels = c("Control 0h",
-                               "Control 72h",
-                               "River 0h",
-                               "River 72h",
-                               # "River+P 0h",
-                               "River+P 72h")) +
-  scale_shape_manual(name = "", values = shape_values,
-                     labels = c("Control 0h",
-                                "Control 72h",
-                                "River 0h",
-                                "River 72h",
-                                "River+P 0h",
-                                "River+P 72h")) +
-  theme(
-    legend.position = "top",
-        legend.box = "horizontal",
-        legend.margin = margin(t = 0, r = 0, b = 0, l = 0, unit = "cm"),
-        legend.box.margin = margin(t = 0, r = 0, b = 0, l = 0, unit = "cm"),
-        legend.spacing = unit(0.005, "cm"),
-    legend.key.size = unit(0.2, "cm"),  # Ajuste general del tamaño del recuadro
-    legend.key.height = unit(0.2, "cm"),  # Ajuste del tamaño de altura del recuadro
-    legend.key.width = unit(0.2, "cm"),
-        legend.title = element_blank()) +
-        theme(plot.title = element_text(size = 10, face = "bold",hjust = 0.04, vjust = -25),
-              axis.text.x = element_text(angle = 0, vjust = 0.5, hjust = 0.5, size=8, face = "bold"),
-            axis.text.y = element_text(angle = 0, vjust = 0.5, hjust = 1, size=8, face = "bold"),
-            axis.title.x = element_text(angle = 0, vjust = 0.5, size=8, face = "bold"),
-            axis.title.y = element_text(angle = 90, vjust = 0.5, size=8, face = "bold")) +
-guides(
-  colour = guide_legend(
-    override.aes = list(
-      shape = shape_values,
-      size = 2
-    ),
-    nrow = 2
-  ),
-  shape = guide_legend(
-    override.aes = list(
-      colour = color_values,
-      size = 2
-    ),
-    nrow = 2
-  )
-)
-
-
-Euk_nMDS_OG
-
-
-```
 
 ```{r}
 library(dplyr)
@@ -2805,72 +2686,9 @@ Euk_nMDS_OG
 ```
 
 
-```{r}
-# Paleta ejemplo para grupos (agrupados y seguros para daltonismo)
-colores_taxones <- c(
-  "Alphaproteobacteria" = "#56B4E9",  # Azul
-  "Rhodobacterales"     = "#0072B2",  # Azul oscuro
-  "Puniceispirillales"  = "#CC79A7",  # Magenta
-  "Rhizobiales"         = "#E69F00",  # Naranja
-  "Gammaproteobacteria"= "#D55E00",  # Rojo
-  "Burkholderiales"     = "#009E73",  # Verde
-  "Enterobacterales"    = "#F0E442",  # Amarillo
-  "Pseudomonadales"     = "#999999",  # Gris
-  "SAR86"               = "#000000",  # Negro
-  "Bacteroidota"        = "#56B4E9",
-  "Flavobacteriales"    = "#0072B2",
-  "Firmicutes"          = "#E69F00",
-  "Cyanobacteria"       = "#009E73",
-  "Actinobacteriota"    = "#D55E00",
-  "Planctomycetota"     = "#CC79A7",
-  "Archaea"             = "#999999",
-  "Other prokaryotes"   = "#F0E442",
-  "Spirotrichea"        = "#56B4E9",
-  "Choreotrichida"      = "#0072B2",
-  "Tintinnida"          = "#E69F00",
-  "Dinoflagellata"      = "#D55E00",
-  "Gonyaulacales"       = "#009E73",
-  "Alexandrium"         = "#CC79A7",
-  "Gymnodiniales"       = "#999999",
-  "Peridiniales"        = "#F0E442",
-  "Syndiniales"         = "#000000",
-  "Symbiodinium"        = "#56B4E9",
-  "Sarmatiales"         = "#0072B2",
-  "Ochromonadales"      = "#E69F00",
-  "Bacillariophyta"     = "#009E73",
-  "Thalassiosira"       = "#D55E00",
-  "Chaetoceros"         = "#CC79A7",
-  "Skeletonema"         = "#999999",
-  "Pseudo-nitzschia"    = "#F0E442",
-  "Glaucophyta"         = "#000000",
-  "Chlorophyta"         = "#56B4E9",
-  "Amoebozoa"           = "#0072B2",
-  "Haptophyta"          = "#E69F00",
-  "Rhizaria"            = "#009E73",
-  "Other eukaryotes"    = "#999999"
-)
-```
-
-
-
-
-
 
 ```{r, fig.height=9, fig.width=7}
 # 💾 Guardar
-# Legacy PNG save block replaced by the active PDF ggsave() below.
-#     width = 18, height = 24, units = 'cm', res=600 )
-
-# # Crea un objeto ggdraw con el título
-# Title_A <- ggdraw() + 
-#   draw_label("a) Metatranscriptomic Taxonomy Distribution", fontface = 'bold', size = 10, y= 0.5)
-# 
-# MetaTs_plot <- plot_grid(Title_A, 
-#                          plot_grid(Prok_Transcriptome_proportion_plot, Euk_Transcriptome_proportion_plot, ncol = 2, rel_widths = c(1, 1)),
-#                          ncol = 1,
-#                          rel_heights = c(0.05, 1)) # Ajusta rel_heights según sea necesario
-
-
 
 # Crea un objeto ggdraw con el título
 Title_B <- ggdraw() + 
@@ -3385,202 +3203,4 @@ ggsave(
 
 combined_plot
 ```
-
-```{r, fig.height=7, fig.width=7}
-
-counts_raw_1 <- read_parquet("../data/processed/prokaryotes/prok_tpms_annotated.parquet")
-
-my.colors_All <- c("Bacteria" = "purple2", "Archaea"  = "darkorange2","No domain"  = "grey33")
-
-
-MetaTs_compleat_datasetr_plot <- ggplot(counts_raw_1, aes(y=tpm, x=treatment, fill=Domain)) + # fill=Our_Taxonomy
-    geom_bar(position="fill", stat="identity") + #, color ="black"
-  # geom_text(aes(label = Final_Taxonomy), position = position_fill(vjust = 0.5)) + # Agregar esta línea
-  ggtitle ("Prokariotic metatranscriptome")+
-    labs(x="", y="", fill="", col="") +
-    theme_bw(base_size = 8) +
-  theme(plot.title = element_text(size = 10, face = "bold", hjust = 0.5),
-        plot.subtitle  = element_text(size = 8, hjust = 0), 
-        plot.caption = element_text(size = 8, hjust = 0, vjust = 0),
-        axis.title.y = element_blank(),
-        axis.title.x = element_text(angle = 0, vjust = 0.5, face = "bold"),
-        axis.text.x = element_text(angle = 0, vjust = 0.5, hjust = 0.5, size=8, face = "bold"),
-        axis.text.y = element_text(angle = 0, vjust = 0.5, hjust = 0.5, size=8, face = "bold"),
-        strip.text = element_text(size = 8), 
-        strip.text.x = element_text(size=8, angle=0, face = "bold"),
-        strip.text.y = element_text(size=8, angle=270, face = "bold"),
-        strip.background = element_rect(colour="black", fill="white"),
-        legend.text = element_text(size = 9), # Incrementar el tamaño del texto de la leyenda
-        legend.position = "none",
-        legend.box = "horizontal",
-        legend.margin = margin(t = -1, r = 0, b = 0, l = 0, unit = "cm"),
-        legend.box.margin = margin(t = 0, r = 0, b = 0, l = 0, unit = "cm"),
-        legend.spacing = unit(0.05, "cm"),
-    legend.key.size = unit(0.2, "cm"),  # Ajuste general del tamaño del recuadro
-    legend.key.height = unit(0.2, "cm"),  # Ajuste del tamaño de altura del recuadro
-    legend.key.width = unit(0.3, "cm"), 
-        legend.title = element_blank()) +
-      guides(fill = guide_legend(nrow = 41)) +
-      scale_fill_manual(values = my.colors_All) +
-scale_y_continuous(breaks = seq(0, 1, 0.25), labels = scales::percent)+
-facet_nested( ~ time, scales = "free")+
-  theme(panel.spacing = unit(0.2, "lines"))
-
-MetaTs_compleat_datasetr_plot
-
-
-# Supplementary Figure 1 is saved after the combined plot is assembled.
-#        width = 18, # anchura
-#        height = 18, # altura
-#        units = "cm",
-#        dpi = 600)
-
-```
-
-```{r, fig.height=7, fig.width=7}
-polyA_counts_raw_1 <- read_parquet("../data/processed/eukaryotes/euk_tpms_annotated.parquet")
-
-my.colors_All <- c("Bacteria" = "purple2", "Archaea"  = "darkorange2", "Eukaryota"  = "darkgreen",
-                          "No domain"  = "grey33")
-
-
-PolyA_MetaTs_compleat_datasetr_plot <- ggplot(polyA_counts_raw_1, aes(y=tpm, x=treatment, fill=Domain)) + # fill=Our_Taxonomy
-    geom_bar(position="fill", stat="identity") + #, color ="black"
-  # geom_text(aes(label = Final_Taxonomy), position = position_fill(vjust = 0.5)) + # Agregar esta línea
-  ggtitle ("Eukariotic metatranscriptome")+
-    labs(x="", y="", fill="", col="") +
-    theme_bw(base_size = 8) +
-  theme(plot.title = element_text(size = 10, face = "bold", hjust = 0.5),
-        plot.subtitle  = element_text(size = 8, hjust = 0), 
-        plot.caption = element_text(size = 8, hjust = 0, vjust = 0),
-        axis.title.y = element_blank(),
-        axis.title.x = element_text(angle = 0, vjust = 0.5, face = "bold"),
-        axis.text.x = element_text(angle = 0, vjust = 0.5, hjust = 0.5, size=8, face = "bold"),
-        axis.text.y = element_text(angle = 0, vjust = 0.5, hjust = 0.5, size=8, face = "bold"),
-        strip.text = element_text(size = 8), 
-        strip.text.x = element_text(size=8, angle=0, face = "bold"),
-        strip.text.y = element_text(size=8, angle=270, face = "bold"),
-        strip.background = element_rect(colour="black", fill="white"),
-        legend.text = element_text(size = 9), # Incrementar el tamaño del texto de la leyenda
-        legend.position = "none",
-        legend.box = "horizontal",
-        legend.margin = margin(t = -1, r = 0, b = 0, l = 0, unit = "cm"),
-        legend.box.margin = margin(t = 0, r = 0, b = 0, l = 0, unit = "cm"),
-        legend.spacing = unit(0.05, "cm"),
-    legend.key.size = unit(0.2, "cm"),  # Ajuste general del tamaño del recuadro
-    legend.key.height = unit(0.2, "cm"),  # Ajuste del tamaño de altura del recuadro
-    legend.key.width = unit(0.3, "cm"), 
-        legend.title = element_blank()) +
-      guides(fill = guide_legend(nrow = 41)) +
-        scale_fill_manual(values = my.colors_All) +
-scale_y_continuous(breaks = seq(0, 1, 0.25), labels = scales::percent)+
-  facet_nested( ~ time, scales = "free")+
-  theme(panel.spacing = unit(0.2, "lines"))
-
-PolyA_MetaTs_compleat_datasetr_plot
-
-
-# Supplementary Figure 1 is saved after the combined plot is assembled.
-#        width = 18, # anchura
-#        height = 18, # altura
-#        units = "cm",
-#        dpi = 600)
-
-```
-
-```{r}
-# Cargar librería
-library(ggplot2)
-
-# Paleta de colores
-my.colors <- c(
-  "Bacteria" = "purple2",
-  "Archaea" = "darkorange2",
-  "Eukaryota" = "darkgreen",
-  "No domain" = "grey33"
-)
-
-# Dataset para que cada barra represente una categoría
-dummy_data <- data.frame(
-  Domain = factor(c("Bacteria", "Archaea", "Eukaryota", "No domain"),
-                  levels = c("Bacteria", "Archaea", "Eukaryota", "No domain")),
-  value = rep(1, 4)
-)
-
-# Crear gráfico con barras bajas y leyenda visible arriba
-ggplot(dummy_data, aes(x = Domain, y = value, fill = Domain)) +
-  geom_bar(stat = "identity", width = 0.0001) +  # barras mínimas
-  scale_fill_manual(values = my.colors) +
-  theme_void() +
-  theme(
-    legend.position = "top",
-    legend.direction = "horizontal",
-    legend.title = element_blank(),
-    legend.text = element_text(size = 12),
-    legend.key.height = unit(0.4, "cm"),
-    legend.key.width = unit(0.8, "cm"),
-    plot.margin = margin(1, 1, 1, 1, unit = "cm")
-  )
-
-
-```
-
-
-
-
-```{r}
-library(ggplot2)
-library(patchwork)
-library(grid)  # Para usar textGrob
-
-# 🎨 Colores
-my.colors <- c(
-  "Bacteria" = "purple2",
-  "Archaea" = "darkorange2",
-  "Eukaryota" = "darkgreen",
-  "No domain" = "grey33"
-)
-
-# 📊 Gráfico de leyenda
-legend_plot <- ggplot(data.frame(Domain = names(my.colors), value = 1),
-                      aes(x = Domain, y = value, fill = Domain)) +
-  geom_bar(stat = "identity", width = 0.0001) +
-  scale_fill_manual(values = my.colors) +
-  theme_void() +
-  theme(
-    legend.position = "top",
-    legend.direction = "horizontal",
-    legend.title = element_blank(),
-    legend.text = element_text(size = 10),
-    legend.key.height = unit(0.4, "cm"),
-    legend.key.width = unit(0.8, "cm")
-  )
-
-# 🧪 Eliminar leyenda de los plots principales
-MetaTs_compleat_datasetr_plot <- MetaTs_compleat_datasetr_plot +
-  theme(legend.position = "none")
-
-PolyA_MetaTs_compleat_datasetr_plot <- PolyA_MetaTs_compleat_datasetr_plot +
-  theme(legend.position = "none")
-
-# 🧩 Componer: título + gráficas + leyenda al fondo
-combined_plot <- wrap_elements(full = textGrob("Taxonomic assignment of:",
-                                               gp = gpar(fontsize = 13, fontface = "bold"))) /
-                 (MetaTs_compleat_datasetr_plot | PolyA_MetaTs_compleat_datasetr_plot) /
-                 legend_plot +
-  plot_layout(heights = c(0.06, 0.85, 0.002))  # proporciones ajustadas
-
-# 💾 Guardar
-ggsave(
-  filename = file.path(supplementary_dir, "Supplementary_Figure_1.png"),
-  plot = combined_plot,
-  width = 18,
-  height = 14,
-  units = "cm",
-  dpi = 600
-)
-
-
-```
-
 
