@@ -47,6 +47,72 @@ dir.create(processed_dir, recursive = TRUE, showWarnings = FALSE)
 dir.create(results_dir, recursive = TRUE, showWarnings = FALSE)
 ```
 
+# Environmental data
+
+```{r environmental-data}
+# -------------------------------------------------------------------------
+# Environmental metadata
+# -------------------------------------------------------------------------
+# Bacterial production, primary production and nutrient concentrations are
+# summarized for the treatment × time combinations used in the published
+# experiment.
+
+production_data <- read.csv(
+  here::here(
+    "data", "metadata", "environmental",
+    "WP2_Spring_BP_PP_Mesocosmos.csv"
+  ),
+  sep = ",",
+  check.names = FALSE
+) %>%
+  tidyr::separate(
+    sample,
+    into = c("treatment", "time"),
+    sep = "_"
+  ) %>%
+  dplyr::select(-errorstandar)
+
+nutrients <- read.csv(
+  here::here(
+    "data", "metadata", "environmental",
+    "WP2_Spring_Mesocosmos.csv"
+  ),
+  sep = ";",
+  check.names = FALSE
+) %>%
+  tidyr::separate(
+    sample,
+    into = c("treatment", "time"),
+    sep = "_"
+  ) %>%
+  dplyr::filter(time %in% c("0h", "72h")) %>%
+  dplyr::group_by(treatment, time, variable) %>%
+  dplyr::summarise(
+    mean = mean(value),
+    .groups = "drop"
+  )
+
+Environmental_data <- dplyr::bind_rows(
+  nutrients,
+  production_data
+) %>%
+  dplyr::mutate(
+    treatment = dplyr::recode(treatment, "RP" = "R+P")
+  ) %>%
+  tidyr::unite(
+    sample,
+    treatment,
+    time,
+    sep = "_",
+    remove = TRUE
+  ) %>%
+  tidyr::pivot_wider(
+    names_from = variable,
+    values_from = mean
+  )
+```
+
+
 # Taxonomic annotation
 
 ```{r taxonomy-load}
@@ -591,6 +657,7 @@ Euk_TPMs_annotated <- Euk_annotated %>%
     replic,
     geneid,
     Final_Taxonomy,
+    Domain,
     Phylum,
     Class,
     Order,
