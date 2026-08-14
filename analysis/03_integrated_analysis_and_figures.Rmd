@@ -1227,20 +1227,7 @@ Phosphorus_Barplot <- ggplot(Phosphorus_Genes, aes(y=mean, x=treatment)) +
       scale_y_continuous(limits = c(0, 4000), breaks = seq(0, 4000, by = 800))    # Pi mobilization
     ))
 
-# # 💾 Guardar
-# Legacy PNG save block replaced by the active PDF ggsave() below.
-#     width = 18, height = 24, units = 'cm', res=600 )
-# 
-# # Mostrar el gráfico combinado
-# Phosphorus_Barplot
-# 
-# # Imprime el gráfico final
-# print(Phosphorus_Barplot)
-# 
-# # Cierra el dispositivo de gráficos
-# dev.off()
-# Phosphorus_Barplot
-
+Phosphorus_Barplot
 
 ggsave(
   filename = file.path(figures_dir, "Figure_3.pdf"),
@@ -1252,48 +1239,7 @@ ggsave(
 
 
 
-```{r}
-Total_Phoshorus <- P_Genes %>%
-  group_by(Workpackage, treatment, time, replic, Category, Domain) %>%
-  dplyr::summarise(tpm = sum(tpm)) %>%
-  group_by(Workpackage, treatment, time, Category, Domain) %>%
-  dplyr::summarise(Total_P_mean=mean(tpm), errorstandar=std.error(tpm)) %>%
-ungroup()
 
-Total_Phoshorus$Domain  <- factor(  Total_Phoshorus$Domain,
-                                                     levels = c("Prokaryotes","Eukaryotes"))
-
-Phosphorus_Barplot <- ggplot(Total_Phoshorus, aes(y=Total_P_mean, x=treatment)) + 
-  geom_errorbar(aes(ymin = Total_P_mean - errorstandar, ymax = Total_P_mean + errorstandar), width = 0.4, position = position_dodge(0.8)) +
-  geom_bar(data = Total_Phoshorus, aes(fill = treatment, y = Total_P_mean, x = treatment), stat = "identity") + 
-  
-  labs(x="", y="(TPM)", fill="", col="") +
-  theme_bw(base_size = 8) +
-  theme(plot.title = element_text(size = 8, face = "bold", hjust = 0),
-        plot.subtitle  = element_text(size = 8, hjust = 0), 
-        plot.caption = element_text(size = 8, hjust = 0, vjust = 0),
-        axis.title.y = element_text(angle = 90, vjust = 0.5, face = "bold"),
-        axis.title.x = element_text(angle = 0, vjust = 0.5, face = "bold"),
-        axis.text.x = element_text(angle = 0, vjust = 0.5, hjust = 0.5, size=8, face = "bold"),
-        axis.text.y = element_text(angle = 0, vjust = 0.5, hjust = 0.5, size=8, face = "bold"),
-        strip.text = element_text(size = 8), 
-        strip.text.x = element_text(size=8, angle=0, face = "bold"),
-        strip.text.y = element_text(size=8, angle=0, face = "bold"),
-        strip.background = element_rect(colour="black", fill="white"),
-        legend.text = element_text(size = 8), 
-        legend.position = "right",
-        legend.box = "horizontal",
-        legend.spacing = unit(0.005, "cm"),
-        legend.key.size = unit(0.2, "cm"),
-        legend.key.height = unit(0.2, "cm"),
-        legend.key.width = unit(0.2, "cm"), 
-        legend.title = element_blank()) +
-    scale_fill_manual(values=c("royalblue3", "deepskyblue3", "darkorchid3" )) +
-  facet_nested( ~ Category + Domain + time, scales = "free_y", labeller = label_wrap_gen(30)) +
-  theme(panel.spacing = unit(0.2, "lines")) 
-Phosphorus_Barplot
-
-```
 
 ```{r, fig.height=9, fig.width=7}
 Phosphorus_Subcategory <- P_Genes %>%
@@ -1306,45 +1252,41 @@ ungroup()
 Phosphorus_Subcategory$Domain  <- factor(  Phosphorus_Subcategory$Domain,
                                                      levels = c("Prokaryotes","Eukaryotes"))
 
-Phosphorus_Barplot <- ggplot(Phosphorus_Subcategory, aes(y=SubCat_mean, x=treatment)) + 
-  geom_errorbar(aes(ymin = SubCat_mean - errorstandar, ymax = SubCat_mean + errorstandar), width = 0.4, position = position_dodge(0.8)) +
-  geom_bar(data = Phosphorus_Subcategory, aes(fill = treatment, y = SubCat_mean, x = treatment), stat = "identity") + 
-  
-  labs(x="", y="(TPM)", fill="", col="") +
-  theme_bw(base_size = 8) +
-  theme(plot.title = element_text(size = 8, face = "bold", hjust = 0),
-        plot.subtitle  = element_text(size = 8, hjust = 0), 
-        plot.caption = element_text(size = 8, hjust = 0, vjust = 0),
-        axis.title.y = element_text(angle = 90, vjust = 0.5, face = "bold"),
-        axis.title.x = element_text(angle = 0, vjust = 0.5, face = "bold"),
-        axis.text.x = element_text(angle = 0, vjust = 0.5, hjust = 0.5, size=8, face = "bold"),
-        axis.text.y = element_text(angle = 0, vjust = 0.5, hjust = 0.5, size=8, face = "bold"),
-        strip.text = element_text(size = 8), 
-        strip.text.x = element_text(size=8, angle=0, face = "bold"),
-        strip.text.y = element_text(size=8, angle=0, face = "bold"),
-        strip.background = element_rect(colour="black", fill="white"),
-        legend.text = element_text(size = 8), 
-        legend.position = "right",
-        legend.box = "horizontal",
-        legend.spacing = unit(0.005, "cm"),
-        legend.key.size = unit(0.2, "cm"),
-        legend.key.height = unit(0.2, "cm"),
-        legend.key.width = unit(0.2, "cm"), 
-        legend.title = element_blank()) +
-      scale_fill_manual(values=c("royalblue3", "deepskyblue3", "darkorchid3", 
-                                 "royalblue3", "deepskyblue3", "darkorchid3", 
-                                 "royalblue3", "deepskyblue3", "darkorchid3", 
-                                 "royalblue3", "deepskyblue3", "darkorchid3", 
-                                 "royalblue3", "deepskyblue3", "darkorchid3", 
-                                 "royalblue3", "deepskyblue3", "darkorchid3" 
-                                 )) +
-  guides(fill = guide_legend(override.aes = list(size=5), nrow = 41)) +
-  facet_nested(Subcategory ~ Category + Domain + time, scales = "free_y", labeller = label_wrap_gen(30)) +
-  theme(panel.spacing = unit(0.2, "lines")) 
-Phosphorus_Barplot
-
-
 ```
+
+```{r}
+Total_Phoshorus <- P_Genes %>%
+  group_by(
+    Workpackage,
+    treatment,
+    time,
+    replic,
+    Category,
+    Domain
+  ) %>%
+  dplyr::summarise(
+    tpm = sum(tpm),
+    .groups = "drop"
+  ) %>%
+  group_by(
+    Workpackage,
+    treatment,
+    time,
+    Category,
+    Domain
+  ) %>%
+  dplyr::summarise(
+    Total_P_mean = mean(tpm),
+    errorstandar = std.error(tpm),
+    .groups = "drop"
+  )
+
+Total_Phoshorus$Domain <- factor(
+  Total_Phoshorus$Domain,
+  levels = c("Prokaryotes", "Eukaryotes")
+)
+```
+
 
 ```{r, fig.height=8, fig.width=6}
 
@@ -1355,22 +1297,7 @@ Sobcategory_proportions <- Phosphorus_Subcategory %>%
   group_by(Domain, Workpackage, treatment, time, Subcategory) %>%
   mutate(Proportion =(SubCat_mean/Total_P_mean)*100)
 
-# Paleta colorblind-friendly (Okabe & Ito) 
-# colors <- c(
-#   "High affinity transporters" = "#CC79A7",
-#   "High affinity\ntransporters" = "#CC79A7",
-#   "Low affinity transporters" = "#D55E00",
-#   "Low affinity\ntransporters" = "#D55E00",
-#   "Organic P hydrolysis" = "#F0E442",
-#   "Organic P\nhydrolysis" = "#F0E442",
-#   "P starvation response" = "#009E73",
-#   "P starvation\nresponse" = "#009E73",
-#   "Phosphonate metabolism" = "#E69F00",
-#   "Phosphonate\nmetabolism" = "#E69F00",
-#   "Pi mobilization" = "#56B4E9",
-#   "Pi\nmobilization" = "#56B4E9"
-# )
-# Definir colores estandar
+
 colors <- c(
   "High affinity transporters" = "plum3",
   "High affinity\ntransporters" = "plum3",
