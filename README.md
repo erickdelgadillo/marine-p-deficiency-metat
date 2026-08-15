@@ -121,12 +121,12 @@ Only after this validation step will legacy code and dependencies be modernized.
 * [x] Repository structure initialized
 * [x] Original R environment reconstructed
 * [x] Legacy package dependencies resolved
-* [ ] Original scripts archived
-* [ ] Prokaryotic preprocessing refactored
-* [ ] Eukaryotic preprocessing refactored
-* [ ] Differential expression workflow refactored
-* [ ] Multivariate analyses refactored
-* [ ] Figure-generation workflow separated
+* [x] Original scripts archived
+* [x] Prokaryotic preprocessing refactored
+* [x] Eukaryotic preprocessing refactored
+* [x] Differential expression workflow refactored
+* [x] Multivariate analyses refactored
+* [x] Figure-generation workflow separated
 * [ ] Dependency versions frozen
 * [ ] Full reproducibility validation
 
