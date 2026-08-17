@@ -39,11 +39,68 @@ library(ggplot2)
 SIGNIFICANCE <- 0.05
 N_REPLICATES <- 3
 
-processed_dir <- here::here("data", "processed", "prokaryotes")
-results_dir <- here::here("results", "prokaryotes")
+# processed_dir <- here::here("data", "processed", "prokaryotes")
+# results_dir <- here::here("results", "prokaryotes")
+# 
+# dir.create(processed_dir, recursive = TRUE, showWarnings = FALSE)
+# dir.create(results_dir, recursive = TRUE, showWarnings = FALSE)
+```
 
-dir.create(processed_dir, recursive = TRUE, showWarnings = FALSE)
-dir.create(results_dir, recursive = TRUE, showWarnings = FALSE)
+```{r environmental-data}
+# -------------------------------------------------------------------------
+# Environmental metadata
+# -------------------------------------------------------------------------
+# Bacterial production, primary production and nutrient concentrations are
+# summarized for the treatment × time combinations used in the published
+# experiment.
+
+production_data <- read.csv(
+    "../data/metadata/environmental/WP2_Spring_BP_PP_Mesocosmos.csv",
+  sep = ",",
+  check.names = FALSE
+) %>%
+  tidyr::separate(
+    sample,
+    into = c("treatment", "time"),
+    sep = "_"
+  ) %>%
+  dplyr::select(-errorstandar)
+
+nutrients <- read.csv(
+    "../data/metadata/environmental/WP2_Spring_Mesocosmos.csv",
+  sep = ";",
+  check.names = FALSE
+) %>%
+  tidyr::separate(
+    sample,
+    into = c("treatment", "time"),
+    sep = "_"
+  ) %>%
+  dplyr::filter(time %in% c("0h", "72h")) %>%
+  dplyr::group_by(treatment, time, variable) %>%
+  dplyr::summarise(
+    mean = mean(value),
+    .groups = "drop"
+  )
+
+Environmental_data <- dplyr::bind_rows(
+  nutrients,
+  production_data
+) %>%
+  dplyr::mutate(
+    treatment = dplyr::recode(treatment, "RP" = "R+P")
+  ) %>%
+  tidyr::unite(
+    sample,
+    treatment,
+    time,
+    sep = "_",
+    remove = TRUE
+  ) %>%
+  tidyr::pivot_wider(
+    names_from = variable,
+    values_from = mean
+  )
 ```
 
 # Taxonomic annotation
@@ -56,10 +113,7 @@ dir.create(results_dir, recursive = TRUE, showWarnings = FALSE)
 # allowing downstream grouping to fall back to broader taxonomic ranks.
 
 taxonomy <- readr::read_tsv(
-  here::here(
-    "data", "raw", "prokaryotes",
-    "taxonomy_classification_gtdb.tsv"
-  ),
+    "../data/raw/prokaryotes/taxonomy_classification_gtdb.tsv",
   show_col_types = FALSE
 ) %>%
   dplyr::select(
@@ -278,10 +332,7 @@ stopifnot(!anyDuplicated(Taxonomy$orf))
 # belonging to the experiment reproduced in this repository are retained.
 
 samples_tags <- read.csv(
-  here::here(
-    "data", "metadata", "prokaryotes",
-    "INTERES_Prok_samples_tags.csv"
-  ),
+  "../data/metadata/prokaryotes/INTERES_Prok_samples_tags.csv",
   sep = ",",
   check.names = FALSE
 ) %>%
@@ -328,11 +379,7 @@ stopifnot(
 
 Prok_annotations <- suppressWarnings(
   data.table::fread(
-    here::here(
-      "data", "raw", "prokaryotes",
-      "all_samples_emapper_annotations.tsv"
-    )
-  )
+      "../data/raw/prokaryotes/all_samples_emapper_annotations.tsv")
 ) %>%
   dplyr::rename(
     orf = `#query`
@@ -372,10 +419,7 @@ stopifnot(!anyDuplicated(Prok_annotations$orf))
 # prokaryotic fraction.
 
 prok_counts_raw <- readr::read_tsv(
-  here::here(
-    "data", "raw", "prokaryotes",
-    "counts.tsv.gz"
-  ),
+    "../data/raw/prokaryotes/counts.tsv.gz",
   show_col_types = FALSE
 ) %>%
   dplyr::filter(
@@ -419,10 +463,7 @@ stopifnot(
 # only in the unused `name` field.
 
 Hiper_proteins_analysis <- readxl::read_excel(
-  here::here(
-    "data", "metadata", "environmental",
-    "Protein_profiles_2024.xlsx"
-  ),
+    "../data/metadata/environmental/Protein_profiles_2024.xlsx",
   sheet = "Protein profiles",
   col_names = TRUE
 ) %>%
@@ -523,19 +564,12 @@ Prok_TPMs_annotated <- Prok_annotated %>%
 
 arrow::write_parquet(
   Prok_counts_annotated,
-  file.path(
-    processed_dir,
-    "prok_counts_annotated.parquet"
-  )
-)
+    "../data/processed/prokaryotes/prok_counts_annotated.parquet")
+
 
 arrow::write_parquet(
   Prok_TPMs_annotated,
-  file.path(
-    processed_dir,
-    "prok_tpms_annotated.parquet"
-  )
-)
+    "../data/processed/prokaryotes/prok_tpms_annotated.parquet") 
 ```
 
 # Functional TPM analysis
@@ -598,11 +632,7 @@ Prok_functional_TPM <- Prok_functional_joined %>%
 
 arrow::write_parquet(
   Prok_functional_TPM,
-  file.path(
-    processed_dir,
-    "prok_functional_tpms.parquet"
-  )
-)
+    "../data/processed/prokaryotes/prok_functional_tpms.parquet")
 ```
 
 # Mean TPM and taxonomic composition
@@ -642,11 +672,7 @@ Prok_mean_TPM <- Prok_TPMs_annotated %>%
 
 arrow::write_parquet(
   Prok_mean_TPM,
-  file.path(
-    processed_dir,
-    "prok_mean_tpms.parquet"
-  )
-)
+    "../data/processed/prokaryotes/prok_mean_tpms.parquet")
 ```
 
 ```{r taxonomic-composition}
@@ -734,11 +760,7 @@ stopifnot(
 
 readr::write_csv(
   Prok_gene_ratios,
-  file.path(
-    processed_dir,
-    "prok_gene_ratios.csv"
-  )
-)
+    "../data/processed/prokaryotes/prok_gene_ratios.csv")
 ```
 
 # Differential gene expression analysis
@@ -945,11 +967,8 @@ stopifnot(
 
 arrow::write_parquet(
   Prok_DGE_annotated,
-  file.path(
-    processed_dir,
-    "prok_differential_expression.parquet"
-  )
-)
+    "../data/processed/prokaryotes/prok_differential_expression.parquet")
+
 ```
 
 ```{r dge-overview, fig.width=10, fig.height=7}
@@ -1009,10 +1028,7 @@ Prok_DGE_overview_plot <- ggplot(
 Prok_DGE_overview_plot
 
 ggsave(
-  filename = file.path(
-    results_dir,
-    "prok_differential_expression_overview.png"
-  ),
+    "../results/prokaryotes/prok_differential_expression_overview.png",
   plot = Prok_DGE_overview_plot,
   width = 18,
   height = 12,
