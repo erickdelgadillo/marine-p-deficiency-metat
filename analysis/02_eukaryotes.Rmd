@@ -40,11 +40,11 @@ library(ggplot2)
 
 SIGNIFICANCE <- 0.05
 
-processed_dir <- here::here("data", "processed", "eukaryotes")
-results_dir <- here::here("results", "eukaryotes")
-
-dir.create(processed_dir, recursive = TRUE, showWarnings = FALSE)
-dir.create(results_dir, recursive = TRUE, showWarnings = FALSE)
+# processed_dir <- here::here("data", "processed", "eukaryotes")
+# results_dir <- here::here("results", "eukaryotes")
+# 
+# dir.create(processed_dir, recursive = TRUE, showWarnings = FALSE)
+# dir.create(results_dir, recursive = TRUE, showWarnings = FALSE)
 ```
 
 # Environmental data
@@ -58,10 +58,7 @@ dir.create(results_dir, recursive = TRUE, showWarnings = FALSE)
 # experiment.
 
 production_data <- read.csv(
-  here::here(
-    "data", "metadata", "environmental",
-    "WP2_Spring_BP_PP_Mesocosmos.csv"
-  ),
+    "../data/metadata/environmental/WP2_Spring_BP_PP_Mesocosmos.csv",
   sep = ",",
   check.names = FALSE
 ) %>%
@@ -73,10 +70,7 @@ production_data <- read.csv(
   dplyr::select(-errorstandar)
 
 nutrients <- read.csv(
-  here::here(
-    "data", "metadata", "environmental",
-    "WP2_Spring_Mesocosmos.csv"
-  ),
+    "../data/metadata/environmental/WP2_Spring_Mesocosmos.csv",
   sep = ";",
   check.names = FALSE
 ) %>%
@@ -123,10 +117,7 @@ Environmental_data <- dplyr::bind_rows(
 # allowing downstream grouping to fall back to broader taxonomic ranks.
 
 taxonomy <- readr::read_tsv(
-  here::here(
-    "data", "raw", "eukaryotes",
-    "taxonomy_classification.tsv.gz"
-  ),
+  "../data/raw/eukaryotes/taxonomy_classification.tsv.gz",
   show_col_types = FALSE
 ) %>%
   dplyr::rename(
@@ -420,10 +411,7 @@ stopifnot(!anyDuplicated(Taxonomy$geneid))
 # belonging to the experiment reproduced in this repository are retained.
 
 samples_tags <- readr::read_csv(
-  here::here(
-    "data", "metadata", "eukaryotes",
-    "INTERES_Euk_samples_tags.csv"
-  ),
+  "../data/metadata/eukaryotes/INTERES_Euk_samples_tags.csv",
   show_col_types = FALSE
 ) %>%
   dplyr::select(
@@ -473,11 +461,7 @@ stopifnot(
 
 Euk_annotations <- suppressWarnings(
   data.table::fread(
-    here::here(
-      "data", "raw", "eukaryotes",
-      "all_samples_emapper_annotations.tsv"
-    )
-  )
+      "../data/raw/eukaryotes/all_samples_emapper_annotations.tsv")
 ) %>%
   dplyr::rename(
     geneid = `#query`
@@ -517,10 +501,7 @@ stopifnot(!anyDuplicated(Euk_annotations$geneid))
 # eukaryotic fraction.
 
 euk_counts_raw <- readr::read_tsv(
-  here::here(
-    "data", "raw", "eukaryotes",
-    "polyA_counts.tsv.gz"
-  ),
+  "../data/raw/eukaryotes/polyA_counts.tsv.gz",
   show_col_types = FALSE
 ) %>%
   dplyr::rename(
@@ -571,10 +552,7 @@ stopifnot(
 # only in the unused `name` field.
 
 Hiper_proteins_analysis <- readxl::read_excel(
-  here::here(
-    "data", "metadata", "environmental",
-    "Protein_profiles_2024.xlsx"
-  ),
+    "../data/metadata/environmental/Protein_profiles_2024.xlsx",
   sheet = "Protein profiles",
   col_names = TRUE
 ) %>%
@@ -675,19 +653,11 @@ Euk_TPMs_annotated <- Euk_annotated %>%
 
 arrow::write_parquet(
   Euk_counts_annotated,
-  file.path(
-    processed_dir,
-    "euk_counts_annotated.parquet"
-  )
-)
+    "../data/processed/eukaryotes/euk_counts_annotated.parquet")
 
 arrow::write_parquet(
-  Euk_TPMs_annotated,
-  file.path(
-    processed_dir,
-    "euk_tpms_annotated.parquet"
-  )
-)
+    Euk_TPMs_annotated,
+    "../data/processed/eukaryotes/euk_tpms_annotated.parquet")
 ```
 
 # Functional TPM analysis
@@ -754,11 +724,7 @@ Euk_functional_TPM <- Euk_functional_joined %>%
 
 arrow::write_parquet(
   Euk_functional_TPM,
-  file.path(
-    processed_dir,
-    "euk_functional_tpms.parquet"
-  )
-)
+    "../data/processed/eukaryotes/euk_functional_tpms.parquet")
 ```
 
 # Mean TPM and taxonomic composition
@@ -803,11 +769,7 @@ Euk_mean_TPM <- Euk_TPMs_annotated %>%
 
 arrow::write_parquet(
   Euk_mean_TPM,
-  file.path(
-    processed_dir,
-    "euk_mean_tpms.parquet"
-  )
-)
+    "../data/processed/eukaryotes/euk_mean_tpms.parquet")
 ```
 
 ```{r taxonomic-composition}
@@ -895,11 +857,8 @@ stopifnot(
 
 readr::write_csv(
   Euk_gene_ratios,
-  file.path(
-    processed_dir,
-    "euk_gene_ratios.csv"
-  )
-)
+    "../data/processed/eukaryotes/euk_gene_ratios.csv")
+
 ```
 
 # Differential gene expression analysis
@@ -1106,11 +1065,8 @@ stopifnot(
 
 arrow::write_parquet(
   Euk_DGE_annotated,
-  file.path(
-    processed_dir,
-    "euk_differential_expression.parquet"
-  )
-)
+    "../data/processed/eukaryotes/euk_differential_expression.parquet")
+
 ```
 
 ```{r dge-overview, fig.width=10, fig.height=7}
@@ -1170,10 +1126,7 @@ Euk_DGE_overview_plot <- ggplot(
 Euk_DGE_overview_plot
 
 ggsave(
-  filename = file.path(
-    results_dir,
-    "euk_differential_expression_overview.png"
-  ),
+    "../results/eukaryotes/euk_differential_expression_overview.png",
   plot = Euk_DGE_overview_plot,
   width = 18,
   height = 12,
